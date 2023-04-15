@@ -3,9 +3,10 @@
 #include <string.h>
 #include <stdbool.h>
 
-char *encrypt(); // this method will encrypt out plan text accourding to the key
-void fillTheArray();  // this mehtod will fill the 5*5 array with the english litters
+char *encrypt();                             // this method will encrypt our plan text accourding to the key
+void fillTheArray();                         // this mehtod will fill the 5*5 array with the english litters
 bool checkMatchRow(char first, char second); // checking if the coupels of the letters are in the same row or column in the array
+void encryptRaw(Letters *text, int plainTextSize); 
 
 // in this structure we will handel the whole english letters
 typedef struct
@@ -40,7 +41,7 @@ char *encrypt()
     int plainTextSize = strlen(plainText);
     Letters *text[plainTextSize]; // this is will superate the text to Duets
     fillTheArray();
-    // filling the array with the key and rearrange it
+    // filling the array with the key and re arrange it
     for (int i = 0; i < sizeOfArrayLetters; i++)
     {
         for (int j = 0; j < sizeOfArrayLetters; j++)
@@ -49,9 +50,10 @@ char *encrypt()
             {
                 letters[i][j].letter1[0] = key[keyCount];
                 keyCount++;
-            }
-        }
+            }        }
     }
+
+//suprate the plane text in the text struct , as couple and prevent the duplication 
 
     int i = 0;
     while (i < plainTextSize)
@@ -78,46 +80,7 @@ char *encrypt()
     }
 
     // encrypting the text
-    int n = 0;
-    int sizeOfText = plainTextSize;
-    while (n < sizeOfText)
-    {
-        char first = text[n]->letter1[0];
-        char second = text[n]->letter2[0];
-        bool matched = checkMatchRow(first, second);
-
-        if (matched == true)
-        {
-            for (int i = 0; i < sizeOfArrayLetters; i++)
-            {
-                for (int j = 0; j < sizeOfArrayLetters; j++)
-                {
-                    if (letters[i][j].letter1[0] == text[n]->letter1[0])
-                    { // check the mode later for case 4%4 == 0
-                        if (j % 4 == 0)
-                        {
-                            text[n]->letter1[0] = letters[i][j % 4].letter1;
-                        }
-                        else
-                        {
-                            text[n]->letter1[0] = letters[i][j % 4 + 1].letter1[0];
-                        }
-                    }
-                    if (letters[i][j].letter2[0] == text[n]->letter2[0])
-                    {
-                        if (j % 4 == 0)
-                        {
-                            text[n]->letter2[0] = letters[i][j % 4].letter2;
-                        }
-                        else
-                        {
-                            text[n]->letter2[0] = letters[i][j % 4 + 1].letter2[0];
-                        }
-                    }
-                }
-            }
-        }
-    }
+   
 }
 
 void fillTheArray()
@@ -139,7 +102,7 @@ void fillTheArray()
         {
             if (englishLittersCount < 26)
             {
-                if (engilshLitters[englishLittersCount] == i)
+                if (engilshLitters[englishLittersCount] == 'i')
                 {
                     letters[i][j].letter1[0] = 'i';
                     letters[i][j].letter2[0] = 'j';
@@ -179,4 +142,73 @@ bool checkMatchRow(char first, char second)
     }
 
     return matched;
+}
+
+void encryptRaw(Letters *text[], int plainTextSize)
+{
+    int n = 0;
+    int sizeOfText = plainTextSize;
+    while (n < sizeOfText)
+    {
+        char first = text[n]->letter1[0];
+        char second = text[n]->letter2[0];
+        bool matched = checkMatchRow(first, second);
+
+        if (matched == true)
+        {
+            for (int i = 0; i < sizeOfArrayLetters; i++)
+            {
+                for (int j = 0; j < sizeOfArrayLetters; j++)
+                {   
+                    
+                    if (letters[i][j].letter1[0] == text[n]->letter1[0])
+                    { // check the mode later for case 4%4 == 0
+                        if (j % 4 == 0)
+                        {
+                            text[n]->letter1[0] = letters[i][j % 4].letter1[0];
+                        }
+                        else
+                        {
+                            text[n]->letter1[0] = letters[i][j + 1].letter1[0];
+                        }
+                    }
+                    else if (letters[i][j].letter2[0] == text[n]->letter1[0])
+                    {
+                         if (j % 4 == 0)
+                        {
+                            text[n]->letter1[0] = letters[i][j % 4].letter1[0];
+                        }
+                        else
+                        {
+                            text[n]->letter1[0] = letters[i][j + 1].letter1[0];
+                        }
+                    }
+                   
+                    if (letters[i][j].letter1[0] == text[n]->letter2[0])
+                    {
+                        if (j % 4 == 0)
+                        {
+                            text[n]->letter2[0] = letters[i][j % 4].letter2;
+                        }
+                        else
+                        {
+                            text[n]->letter2[0] = letters[i][j % 4 + 1].letter2[0];
+                        }
+                    }
+                 
+                    else if (letters[i][j].letter2[0] == text[n]->letter2[0])
+                    {
+                        if (j % 4 == 0)
+                        {
+                            text[n]->letter2[0] = letters[i][j % 4].letter2;
+                        }
+                        else
+                        {
+                            text[n]->letter2[0] = letters[i][j % 4 + 1].letter2[0];
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
