@@ -1,5 +1,4 @@
-//Greatings, This program created by Abdulqadir Solayman Ali Alzway
-//ID = 5046
+
 //This progrm is using playfire algorithm to encrypt the data
 //This program has written using c language
 
