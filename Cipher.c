@@ -51,6 +51,7 @@ void decrypt (void); // it will handel the whole of the decryption process
 void decryptRow (char first, char second, int Idx);
 void decryptColumn(char first, char second, int Idx);
 void decryptSquare(char first, char second, int Idx);
+char* remove_extra(char* decrypted, char pad); //it will remove any extra padding letters 
 //......................................................................................
 void senario (void); // this will handel the running senario if it going to be encyption or decryption and print the result of the process
 
@@ -680,7 +681,8 @@ void senario(void)
             printf("your text size =  %i\n\n", cipherTextSize);
             // start the decrypting
             decrypt();
-            printf("Your PlainText Is: \n%s\n", plainText); // this is our plaintText after decrypting
+            char *originText = remove_extra(plainText, 'x'); 
+            printf("Your PlainText Is: \n%s\n", originText); // this is our plaintText after decrypting
             break;
     }
 }
@@ -706,4 +708,54 @@ void getPlaces (char first, char second,  int *IdxFcol, int *IdxFrow, int *IdxSc
             }
         }
     }
+}
+
+// A function to remove extra letters after decryption
+char* remove_extra(char* decrypted, char pad) 
+{
+    // Allocate memory for the original text
+    char* original = (char*)malloc(strlen(decrypted));
+    // Initialize a counter for the original text
+    int i = 0;
+    // Loop through the decrypted text
+    for (int j = 0; j < strlen(decrypted); j++) 
+    {
+        // If the current character is the padding letter
+        if (decrypted[j] == pad) 
+        {
+            // Check the next character
+            if (j < strlen(decrypted) - 1) 
+            {
+                // If the next character is also the padding letter
+                if (decrypted[j + 1] == pad) 
+                {
+                    // Keep only one of them and skip the other
+                    original[i] = pad;
+                    i++;
+                    j++;
+                }
+                // If the next character is different from the padding letter
+                else 
+                {
+                    // Drop the current character and keep the next one
+                    original[i] = decrypted[j + 1];
+                    i++;
+                    j++;
+                }
+            }
+            // If there is no next character, drop the current character
+            else {
+                break;
+            }
+        }
+        // If the current character is not the padding letter, keep it as it is
+        else {
+            original[i] = decrypted[j];
+            i++;
+        }
+    }
+    // Add a null terminator to the original text
+    original[i] = '\0';
+    // Return the original text
+    return original;
 }
