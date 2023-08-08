@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <ctype.h>
+
 typedef struct
 {
     char *letter1;
@@ -13,20 +15,27 @@ typedef struct
 
 } Letters;
 
+// Define a node structure for the linked list
+typedef struct node {
+    char* word; // The word stored in the node
+    struct node* next; // The pointer to the next node
+} node;
 
-int plainTextSize;
+
+node *head;
 const int sizeOfArrayLetters = 5;
 Letters **letters; // this is Array struct, where we will store our english letters
-char plainText[500]; // the plain text that the user will enter
+char word[500]; // the words that it will get encrypted
+int wordSize;
+char inputText[1000]; //
+int inputSize;
 char key[25]; // it is the key that the user will enter
-Letters *text; // this is will superate the text to Duets
-char cipherText[500]; // this is the encrypted Text
-int cipherTextSize;
+Letters *sepLitters; // this is will separated the word to Duets
 int input; // this is the input senario it should be either 0 or 1
 
 //.................................................................................
 // The Encryption methods are here
-void encrypt(void); // this will handel the whole encryption process, Using the following methods
+void encrypt(char **node); // this will handel the whole encryption process, Using the following methods
 void encryptRow (char first, char second); // encrypt the letters if they are in the same row accourding to play fire algorithm row case
 void encryptColumn (char first, char second); // encrypt the letters if they are in the same column accourding to play fire algorithm column case
 void encryptSquare (char first, char second); // encypt the lettrers if they are not in same column or row accourding to play fire algorithm third case
@@ -44,14 +53,20 @@ void getPlaces(char first, char second,  int *IdxFcol, int *IdxFrow, int *IdxSco
 bool* hasSeen(void); // this array will check the key letters in letters array as seen in array bool and return that array to use it in fillTheArrayLetters method
 void findEmptyPlace(int *row, int *col); // this method will find an empty place in letters array
 bool hasDuplicateLetters(void); // to check if we have a duplicated letter in the key
-
+//LinkedList to that store the whole plain text word by word
+node* create_node(char* bufferWord);
+node* append_node(node* new_node);
+void print_list(void);
+void free_list(void);
+void distributeInNodes (void);
 // .....................................................................................
 //The decryption methods are here
-void decrypt (void); // it will handel the whole of the decryption process
+void decrypt (char **node); // it will handel the whole of the decryption process
 void decryptRow (char first, char second, int Idx);
 void decryptColumn(char first, char second, int Idx);
 void decryptSquare(char first, char second, int Idx);
-char* remove_extra(char* decrypted, char pad); //it will remove any extra padding letters 
+char* remove_extra(char* decrypted, char pad); //it will remove any extra padding letters
+
 //......................................................................................
 void senario (void); // this will handel the running senario if it going to be encyption or decryption and print the result of the process
 
@@ -70,20 +85,23 @@ int main(void)
     senario();
 }
 
-void encrypt(void)
+void encrypt(char **node)
 {
+    memset(word, '\0', 500);
+    strcpy(word, *node);
+
     allocateMemory();
     fillTheArrayKey();
     fillTheArrayLetters();
 
-    memset(cipherText,'\0', 500);
+    int seperatedTextSize = separateText();
+    // setting the word to NUL so we can store the word after encryption on it
+    memset(word, '\0', 500);
 
-    int TextSize = separateText();
-
-    for (int Idx = 0; Idx < TextSize; Idx++)
+    for (int Idx = 0; Idx < seperatedTextSize; Idx++)
     {
-        char first = text[Idx].letter1[0];
-        char second = text[Idx].letter2[0];
+        char first = sepLitters[Idx].letter1[0];
+        char second = sepLitters[Idx].letter2[0];
 
         bool matchedColumn = checkMatchColumn (first, second);
         bool matchedRow = checkMatchRow (first, second);
@@ -104,8 +122,20 @@ void encrypt(void)
         }
 
     }
+     //realloc memory for our node
+    char *new_str = strdup(word); // allocate and copy word in one function
+    if (new_str == NULL)
+    {
+        // handle allocation failure
+        printf("faild in memory allocation");
+    }
+    else
+    {   // update the value that node points to with the new memory
+        *node = new_str;
+    }
 
     printf("\n");
+
 }
 
 
@@ -282,19 +312,9 @@ bool updateLetter (char letter, char oldLetter, char newLetter)
 
     if (letter == oldLetter && letter != newLetter )
     {
-        if(input == 0)
+        for (int i = 0; i < 500; i++) // this way is not efficient it is butter to make it in linked list, but I was busy to do it
         {
-            for(int i = 0; i < plainTextSize * 2; i++) // this way is not efficient it is butter to make it in linked list, but I was busy to do it
-            {
-                if(cipherText[i] == '\0') {cipherText[i] = newLetter; printf("%c -> %c\n",letter, cipherText[i]); return true; }
-            }
-        }
-        if(input == 1)
-        {
-            for(int i = 0; i < cipherTextSize * 2; i++) // this way is not efficient it is butter to make it in linked list, but I was busy to do it
-            {
-                if(plainText[i] == '\0') {plainText[i] = newLetter; printf("%c -> %c\n",letter, plainText[i]); return true; }
-            }
+            if(word[i] == '\0') {word[i] = newLetter; printf("%c -> %c\n",letter, word[i]); return true; }
         }
     }
 
@@ -326,60 +346,31 @@ int separateText (void)
     int i = 0;
     int j = 0;
 
-    if(input == 0)
+    while (i < wordSize)
     {
-        while (i < plainTextSize)
+        sepLitters[j].letter1[0] = word[i];
+
+        if (i + 1 != wordSize && word[i] == word[i + 1])
         {
-            text[j].letter1[0] = plainText[i];
-
-            if (i + 1 != plainTextSize && plainText[i] == plainText[i + 1])
-            {
-                text[j].letter2[0] = 'x';
-                i++;
-            }
-            else if (i + 1 == plainTextSize)
-            {
-                text[j].letter2[0] = 'x';
-                i++;
-            }
-            else
-            {
-                text[j].letter2[0] = plainText[i + 1];
-                i += 2;
-            }
-
-            j++;
+            sepLitters[j].letter2[0] = 'x';
+            i++;
         }
-    }
-    else
-    {
-        while (i < cipherTextSize)
+        else if (i + 1 == wordSize)
         {
-            text[j].letter1[0] = cipherText[i];
-
-            if (i + 1 != cipherTextSize && cipherText[i] == cipherText[i + 1])
-            {
-                text[j].letter2[0] = 'x';
-                i++;
-            }
-            else if (i + 1 == cipherTextSize)
-            {
-                text[j].letter2[0] = 'x';
-                i++;
-            }
-            else
-            {
-                text[j].letter2[0] = cipherText[i + 1];
-                i += 2;
-            }
-
-            j++;
+            sepLitters[j].letter2[0] = 'x';
+            i++;
         }
-    }
+        else
+        {
+            sepLitters[j].letter2[0] = word[i + 1];
+            i += 2;
+        }
 
-    // to avoid the segmentation fault we should know the size of our text array
-    int TextSize = j ;
-    return TextSize;
+        j++;
+    }
+    // to avoid the segmentation fault we should know the size of our superatedTextArray array
+    int seperatedTextSize = j ;
+    return seperatedTextSize;
 }
 
 
@@ -425,6 +416,7 @@ bool hasDuplicateLetters(void)
 
 void allocateMemory (void)
 {
+    wordSize = strlen(word);
     // allocation memory for letters
     letters = malloc(sizeof(Letters) * sizeOfArrayLetters);
 
@@ -447,36 +439,17 @@ void allocateMemory (void)
     }
 
     // allocationg memory for text
-    if (input == 0)
+    sepLitters = malloc(wordSize * sizeof(Letters));
+    for (int i = 0; i < wordSize; i++)
     {
-        text = malloc(plainTextSize * sizeof(Letters));
-        for (int i = 0; i < plainTextSize; i++)
+        for (int j = 0; j < wordSize; j++)
         {
-            for (int j = 0; j < plainTextSize; j++)
-            {
-                text[j].letter1 = malloc(sizeof(char));
-                text[j].letter2 = malloc(sizeof(char));
-                text[j].letter1[0] = '\0';
-                text[j].letter2[0] = '\0';
-            }
+            sepLitters[j].letter1 = malloc(sizeof(char));
+            sepLitters[j].letter2 = malloc(sizeof(char));
+            sepLitters[j].letter1[0] = '\0';
+            sepLitters[j].letter2[0] = '\0';
         }
     }
-    if(input == 1)
-    {
-        text = malloc(cipherTextSize * sizeof(Letters));
-        for (int i = 0; i < cipherTextSize; i++)
-        {
-            for (int j = 0; j < cipherTextSize; j++)
-            {
-                text[j].letter1 = malloc(sizeof(char));
-                text[j].letter2 = malloc(sizeof(char));
-                text[j].letter1[0] = '\0';
-                text[j].letter2[0] = '\0';
-
-            }
-        }
-    }
-
 }
 
 
@@ -517,21 +490,24 @@ void findEmptyPlace(int *row, int *col)
 }
 
 
-void decrypt (void)
+void decrypt (char **node)
 {
+
+    memset(word, '\0', 500);
+    strcpy(word, *node);
 
     allocateMemory();
     fillTheArrayKey();
     fillTheArrayLetters();
 
-    memset(plainText,'\0', 500);
+    int superatedTextSize = separateText();
+    //setting the word to NUL to store the new word
+    memset(word, '\0', 500);
 
-    cipherTextSize = separateText();
-
-     for (int Idx = 0; Idx < cipherTextSize; Idx++)
+     for (int Idx = 0; Idx < superatedTextSize; Idx++)
      {
-        char first = text[Idx].letter1[0];
-        char second = text[Idx].letter2[0];
+        char first = sepLitters[Idx].letter1[0];
+        char second = sepLitters[Idx].letter2[0];
 
         bool matchedColumn = checkMatchColumn (first, second);
         bool matchedRow = checkMatchRow (first, second);
@@ -546,15 +522,30 @@ void decrypt (void)
         }
         else decryptSquare(first, second, Idx);
     }
-
-    for (int i = 0, j = 0; i < cipherTextSize * 2; i += 2)
+    for (int i = 0, j = 0; i <= wordSize; i += 2)
     {
-        plainText[i] = text[j].letter1[0];
-        plainText[i + 1] = text[j].letter2[0];
+        word[i] = sepLitters[j].letter1[0];
+        word[i + 1] = sepLitters[j].letter2[0];
         j++;
+    }
+    // remove the extra letters in word
+    char *finalWord = remove_extra(word,'x');
+    //realloc memory for our node
+    char *new_str = strdup(finalWord); // allocate and copy word in one function
+    if (new_str == NULL)
+    {
+        // handle allocation failure
+        printf("faild in memory allocation");
+    }
+    else
+    {   // update the value that node points to with the new memory
+        *node = new_str;
     }
 
     printf("\n");
+
+
+
 }
 
 
@@ -570,23 +561,23 @@ void decryptColumn(char first, char second, int Idx)
 
     if(IdxFcol == 0)
     {
-        text[Idx].letter1[0] = letters[sizeOfArrayLetters - 1][IdxFrow].letter1[0];
+        sepLitters[Idx].letter1[0] = letters[sizeOfArrayLetters - 1][IdxFrow].letter1[0];
         printf("%c -> %c\n", first, letters[sizeOfArrayLetters - 1][IdxFrow].letter1[0]);
     }
     else
     {
-        text[Idx].letter1[0] = letters[IdxFcol - 1 ][IdxFrow].letter1[0];
+        sepLitters[Idx].letter1[0] = letters[IdxFcol - 1 ][IdxFrow].letter1[0];
         printf("%c -> %c\n", first, letters[IdxFcol - 1][IdxFrow].letter1[0]);
     }
 
     if(IdxScol == 0)
     {
-        text[Idx].letter2[0] = letters[sizeOfArrayLetters - 1][IdxSrow].letter1[0];
+        sepLitters[Idx].letter2[0] = letters[sizeOfArrayLetters - 1][IdxSrow].letter1[0];
         printf("%c -> %c\n", second, letters[sizeOfArrayLetters - 1][IdxSrow].letter1[0]);
     }
     else
     {
-        text[Idx].letter2[0] = letters[IdxScol - 1][IdxSrow].letter1[0];
+        sepLitters[Idx].letter2[0] = letters[IdxScol - 1][IdxSrow].letter1[0];
         printf("%c -> %c\n", second, letters[IdxScol - 1][IdxSrow].letter1[0]);
     }
 }
@@ -606,24 +597,24 @@ void decryptRow (char first, char second, int Idx)
 
     if(IdxFrow == 0)
     {
-        text[Idx].letter1[0] = letters[IdxFcol][sizeOfArrayLetters - 1].letter1[0];
+        sepLitters[Idx].letter1[0] = letters[IdxFcol][sizeOfArrayLetters - 1].letter1[0];
         printf("%c -> %c\n",first, letters[IdxFcol][sizeOfArrayLetters - 1].letter1[0]);
     }
     else
     {
-        text[Idx].letter1[0] = letters[IdxFcol ][IdxFrow - 1].letter1[0];
+        sepLitters[Idx].letter1[0] = letters[IdxFcol ][IdxFrow - 1].letter1[0];
         printf("%c -> %c\n",first, letters[IdxFcol][IdxFrow - 1].letter1[0]);
     }
 
 
     if(IdxSrow == 0)
     {
-        text[Idx].letter2[0] = letters[IdxScol][sizeOfArrayLetters - 1].letter1[0];
+        sepLitters[Idx].letter2[0] = letters[IdxScol][sizeOfArrayLetters - 1].letter1[0];
         printf("%c -> %c\n",second, letters[IdxScol][sizeOfArrayLetters - 1].letter1[0]);
     }
     else
     {
-        text[Idx].letter2[0] = letters[IdxScol][IdxSrow - 1].letter1[0];
+        sepLitters[Idx].letter2[0] = letters[IdxScol][IdxSrow - 1].letter1[0];
         printf("%c -> %c\n",second, letters[IdxScol][IdxSrow - 1].letter1[0]);
     }
 }
@@ -639,8 +630,8 @@ void decryptSquare(char first, char second, int Idx)
     int IdxSrow = 0;
     getPlaces(first, second, &IdxFcol, &IdxFrow, &IdxScol, &IdxSrow);
 
-    text[Idx].letter1[0] = letters[IdxFcol][IdxSrow].letter1[0];
-    text[Idx].letter2[0] = letters[IdxScol][IdxFrow].letter1[0];
+    sepLitters[Idx].letter1[0] = letters[IdxFcol][IdxSrow].letter1[0];
+    sepLitters[Idx].letter2[0] = letters[IdxScol][IdxFrow].letter1[0];
     printf("%c -> %c\n",first,letters[IdxFcol][IdxSrow].letter1[0]);
     printf("%c -> %c\n",second,letters[IdxScol][IdxFrow].letter1[0]);
 
@@ -649,13 +640,12 @@ void decryptSquare(char first, char second, int Idx)
 
 void senario(void)
 {
-    printf("Which Process You Want To Perform?\n");
-    input = -1;
-
     do
     {
         printf("[0]:Encrytion\n[1]:Decryption\nChoose 0 for Encryption and 1 for Decryption.\n");
         scanf("%i", &input);
+        int c; // declare an int variable to store the input character
+        while ((c = getchar()) != '\n' && c != EOF); // read and discard characters until \n or EOF
 
     } while (input != 0 && input != 1);
 
@@ -664,25 +654,46 @@ void senario(void)
         case 0:
             // taking the planText from the user
             printf("Enter The Text That You Want To Encrypt:\n");
-            scanf("%s", plainText);
+            fgets(inputText, 1000, stdin);
                 // calculate the size of plainText
-            plainTextSize = strlen(plainText);
-            printf("your text size =  %i\n\n", plainTextSize);
+            inputSize = strlen(inputText);
+            printf("Your Text Size + Spaces =  %i\n\n", inputSize - 1);
             // start the encrypting
-            encrypt();
-            printf("Your CipherText Is: \n%s\n", cipherText); // this is our cipherText after encrypting
+            head = NULL;
+            distributeInNodes();
+            // iterate over the list
+            node *current1 = head;
+            while (current1 != NULL)
+            {
+                encrypt(&current1->word);
+                current1 = current1->next;
+            }
+            // finally we can print our cipher text which is inside the list
+            printf("Your CipherText Is: \n");
+            print_list();
+            free_list();
             break;
         case 1:
-            // taking the cipherText from the user
-            printf("Enter The Cipher Text That You Want To Decrypt:\n");
-            scanf("%s", cipherText);
-                // calculate the size of the cipherText
-            cipherTextSize = strlen(cipherText);
-            printf("your text size =  %i\n\n", cipherTextSize);
+            // taking the planText from the user
+            printf("Enter The Text That You Want To Decrypt:\n");
+            fgets(inputText, 1000, stdin);
+            // calculate the size of cipherText
+            inputSize = strlen(inputText);
+            printf("Your Text Size + Spaces =  %i\n\n", inputSize - 1);
             // start the decrypting
-            decrypt();
-            char *originText = remove_extra(plainText, 'x'); 
-            printf("Your PlainText Is: \n%s\n", originText); // this is our plaintText after decrypting
+            head = NULL;
+            distributeInNodes();
+            // iterate over the list
+            node *current2 = head;
+            while (current2 != NULL)
+            {
+                decrypt(&current2->word);
+                current2 = current2->next;
+            }
+            // finally we can print our plainText which is inside the list
+            printf("Your PlainText Is: \n");
+            print_list();
+            free_list();
             break;
     }
 }
@@ -711,23 +722,23 @@ void getPlaces (char first, char second,  int *IdxFcol, int *IdxFrow, int *IdxSc
 }
 
 // A function to remove extra letters after decryption
-char* remove_extra(char* decrypted, char pad) 
+char* remove_extra(char* decrypted, char pad)
 {
     // Allocate memory for the original text
     char* original = (char*)malloc(strlen(decrypted));
     // Initialize a counter for the original text
     int i = 0;
     // Loop through the decrypted text
-    for (int j = 0; j < strlen(decrypted); j++) 
+    for (int j = 0; j < strlen(decrypted); j++)
     {
         // If the current character is the padding letter
-        if (decrypted[j] == pad) 
+        if (decrypted[j] == pad)
         {
             // Check the next character
-            if (j < strlen(decrypted) - 1) 
+            if (j < strlen(decrypted) - 1)
             {
                 // If the next character is also the padding letter
-                if (decrypted[j + 1] == pad) 
+                if (decrypted[j + 1] == pad)
                 {
                     // Keep only one of them and skip the other
                     original[i] = pad;
@@ -735,7 +746,7 @@ char* remove_extra(char* decrypted, char pad)
                     j++;
                 }
                 // If the next character is different from the padding letter
-                else 
+                else
                 {
                     // Drop the current character and keep the next one
                     original[i] = decrypted[j + 1];
@@ -759,3 +770,114 @@ char* remove_extra(char* decrypted, char pad)
     // Return the original text
     return original;
 }
+
+// Create a new node with a given word and return its pointer
+node* create_node(char* bufferWord)
+{
+    // Allocate memory for the node
+    node* new_node = malloc(sizeof(node));
+    if (new_node == NULL)
+    {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
+
+    // Allocate memory for the word and copy it
+    new_node->word = malloc(strlen(bufferWord) + 1);
+    if (new_node->word == NULL)
+    {
+        printf("Memory allocation failed\n");
+        exit(1);
+    }
+    strcpy(new_node->word, bufferWord);
+
+    // Set the next pointer to NULL
+    new_node->next = NULL;
+
+    // Return the node pointer
+    return new_node;
+}
+
+// Append a node to the end of a linked list and return its pointer
+node* append_node(node* new_node)
+{
+    // If the list is empty, return the new node as the head
+    if (head == NULL)
+    {
+        return new_node;
+    }
+
+    // Find the last node of the list
+    node* current = head;
+    while (current->next != NULL)
+    {
+        current = current->next;
+    }
+
+    // Link the new node to the last node
+    current->next = new_node;
+
+    // Return the head of the list
+    return head;
+}
+
+// Print the words in a linked list
+void print_list()
+{
+    // Loop through the list and print each word
+    node* current = head;
+    while (current != NULL)
+    {
+        printf("%s ", current->word); // Print the word
+        current = current->next; // Move to the next node
+    }
+    printf("\n");
+}
+
+// Free the memory allocated for a linked list
+void free_list()
+{
+    // Loop through the list and free each node
+    node* current = head;
+    while (current != NULL)
+    {
+        node* next = current->next; // Save the next pointer
+        free(current->word); // Free the word
+        free(current); // Free the node
+        current = next; // Move to the next node
+    }
+}
+
+void distributeInNodes (void)
+{
+    int count = 0;
+    int countWord = 0;
+    char bufferWord[78] = {'\0'};
+    bool inWord = false;
+
+    while (count < inputSize)
+    {
+        while (!isspace(inputText[count]) && countWord < 78)
+        {
+            bufferWord[countWord] = inputText[count];
+            count++;
+            countWord++;
+            inWord = true;
+        }
+
+        if (inWord)
+        {
+            head = append_node(create_node(bufferWord));
+            memset(bufferWord,'\0', 78);
+            countWord = 0;
+            inWord = false;
+        }
+        count++;
+    }
+
+    if (inWord) // if there is still a word in the buffer
+    {
+        append_node(create_node(bufferWord)); // create and append a node
+    }
+}
+
