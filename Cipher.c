@@ -673,6 +673,7 @@ void senario(void)
             print_list();
             free_list();
             break;
+            
         case 1:
             // taking the planText from the user
             printf("Enter The Text That You Want To Decrypt:\n");
